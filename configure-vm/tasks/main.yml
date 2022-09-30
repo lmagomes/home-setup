@@ -35,6 +35,7 @@
     ansible.builtin.reboot:
 
   - name: Wait for server to start accepting connections
+    become: no
     local_action:
       module: wait_for
         host={{ vm_name }}
