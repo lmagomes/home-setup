@@ -1,0 +1,104 @@
+---
+# tasks file for configure-vm
+
+- name: Configure the VM for k8s
+  block:
+  - name: Upgrade all packages
+    ansible.builtin.dnf:
+      name: "*"
+      state: latest
+  
+  - name: Install needed packages
+    ansible.builtin.dnf:
+      name: iproute-tc
+      state: latest
+  
+  - name: Remove zram-generator-defaults to disable swap
+    ansible.builtin.dnf:
+      name: zram-generator-defaults
+      state: absent
+  
+  - name: Enable ipv4 port forward and bridge-nf-call-iptables
+    ansible.builtin.blockinfile:
+      path: /etc/sysctl.d/99-sysctl.conf
+      block: |
+        net.ipv4.ip_forward = 1
+        net.bridge.bridge-nf-call-iptables = 1
+
+  - name: Add k8s bridge netfilter module
+    ansible.builtin.lineinfile:
+      path: /etc/modules-load.d/k8s.conf
+      line: br_netfilter
+      create: yes
+    
+  - name: Unconditionally reboot the machine with all defaults
+    ansible.builtin.reboot:
+
+  - name: Wait for server to start accepting connections
+    local_action:
+      module: wait_for
+        host={{ vm_name }}
+        port=22
+        delay=30
+  
+  - name: Check if amount of swap is 0 (megabytes)
+    ansible.builtin.raw: free -m | grep Swap | awk '{print $2}'
+    register: swap_space
+    failed_when: swap_space.stdout|int != 0
+    changed_when: false
+
+  - name: Check if ipv4 port forward is enabled
+    ansible.builtin.raw: sysctl net.ipv4.ip_forward | awk '{print $3}'
+    register: ipv4_forward
+    failed_when: ipv4_forward.stdout|int != 1
+    changed_when: false
+
+  - name: Check if bridge-nf-call-iptables is enabled
+    ansible.builtin.raw: sysctl net.bridge.bridge-nf-call-iptables | awk '{print $3}'
+    register: bridge_nf_call
+    failed_when: bridge_nf_call.stdout|int != 1
+    changed_when: false
+
+  - name: Add kubernetes repository
+    ansible.builtin.template:
+      src: templates/kubernetes.repo
+      dest: /etc/yum.repos.d/kubernetes.repo
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: Add k8s packages
+    ansible.builtin.dnf:
+      name: kubectl,kubeadm,kubelet
+      state: latest
+
+  - name: Add containerd runtime
+    ansible.builtin.dnf:
+      name: containerd
+      state: latest
+
+  - name: Create a default configuration file for containerd
+    ansible.builtin.shell: containerd config default | sudo tee /etc/containerd/config.toml
+  
+  - name: Enable SystemdCgroup in the containerd configuration
+    ansible.builtin.lineinfile:
+      path: /etc/containerd/config.toml
+      search_string: '            SystemdCgroup = false'
+      line: '            SystemdCgroup = true'
+
+  - name: Fix containerd plugins directory configuration (https://bugzilla.redhat.com/show_bug.cgi?id=1731597)
+    ansible.builtin.lineinfile:
+      path: /etc/containerd/config.toml
+      search_string: '      bin_dir = "/opt/cni/bin"'
+      line: '      bin_dir = "/usr/libexec/cni/"'
+
+  - name: Enable service containerd and ensure it is not masked
+    ansible.builtin.systemd:
+      name: containerd
+      enabled: yes
+      masked: no
+    
+  - name: Make sure containerd is running
+    ansible.builtin.systemd:
+      state: started
+      name: containerd

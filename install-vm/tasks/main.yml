@@ -1,0 +1,42 @@
+---
+# tasks file for install-vm
+
+- name: Get VMs list
+  community.libvirt.virt:
+    command: list_vms
+  register: existing_vms
+  changed_when: no
+
+- name: Create VM if not exists
+  block:
+  - name: create the image
+    command: |
+      virt-builder fedora-36 \
+        --format qcow2 -o {{ libvirt_pool_dir }}/{{ vm_name }}.qcow2 \
+        --size 8G \
+        --hostname {{ vm_name }} \
+        --run-command "useradd -m {{ vm_user_name }} -G wheel" \
+        --ssh-inject "{{ vm_user_name }}:file:{{ ssh_key }}" \
+        --run-command "echo '{{ vm_user_name }} ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers.d/{{ vm_user_name }}" \
+        --timezone Europe/Lisbon \
+        --run-command "fixfiles -F onboot"
+
+  - name: create the vm
+    command: |
+      virt-install --name={{ vm_name }} \
+        --vcpus={{ vm_vcpus }} \
+        --memory={{ vm_ram_mb }} \
+        --disk {{ libvirt_pool_dir }}/{{ vm_name }}.qcow2,format=qcow2,bus=virtio \
+        --import \
+        --graphics vnc,listen=0.0.0.0 --noautoconsole \
+        --network bridge:vm-bridge \
+        --os-variant=fedora36
+  
+  - name: Wait for server to start accepting connections
+    local_action:
+      module: wait_for
+        host={{ vm_name }}
+        port=22
+        delay=30
+
+  when: "vm_name not in existing_vms.list_vms"

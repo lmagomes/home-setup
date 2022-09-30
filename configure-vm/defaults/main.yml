@@ -1,0 +1,4 @@
+---
+# defaults file for configure-vm
+
+vm_name: k8s-controller-1

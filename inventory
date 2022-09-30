@@ -1,0 +1,9 @@
+[all:vars]
+ansible_user=node
+
+[controller]
+k8s-controller-1
+
+[workers]
+k8s-worker-1
+k8s-worker-2

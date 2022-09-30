@@ -1,0 +1,33 @@
+---
+# tasks file for configure-controller
+
+- name: Configure the VM for k8s
+  block:
+    - name: initialize k8s
+      become: yes
+      ansible.builtin.shell: kubeadm init --control-plane-endpoint={{hostvars[inventory_hostname]['ansible_default_ipv4']['address']}} --node-name {{ vm_name }} --pod-network-cidr=10.244.0.0/16
+
+    - name: Open port to the outside
+      become: yes
+      shell: firewall-cmd --add-port=6443/tcp
+
+    - name: Setup configuration
+      shell: |
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown -R $(id -u):$(id -g) $HOME/.kube
+
+    - name: Apply flannel yaml
+      shell: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+    # - name: Enable service kubelet and ensure it is not masked
+    #   become: yes
+    #   ansible.builtin.systemd:
+    #     name: kubelet
+    #     enabled: yes
+    #     masked: no
+      
+    # - name: Make sure kubelet is running
+    #   ansible.builtin.systemd:
+    #     state: started
+    #     name: kubelet
