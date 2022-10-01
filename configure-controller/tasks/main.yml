@@ -9,7 +9,7 @@
 
     - name: Open port to the outside
       become: yes
-      shell: firewall-cmd --add-port=6443/tcp
+      shell: firewall-cmd --add-port=6443/tcp && firewall-cmd --runtime-to-permanent
 
     - name: Setup configuration
       shell: |
@@ -20,14 +20,32 @@
     - name: Apply flannel yaml
       shell: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
 
-    # - name: Enable service kubelet and ensure it is not masked
-    #   become: yes
-    #   ansible.builtin.systemd:
-    #     name: kubelet
-    #     enabled: yes
-    #     masked: no
+    - name: copy flannel binary to the containerd configured plugin folder
+      become: yes
+      copy:755755
+        src: /opt/cni/bin/flannel
+        dest: /usr/libexec/cni/flannel
+        mode: '0755'
+        remote_src: yes
+
+    - name: Enable service kubelet and ensure it is not masked
+      become: yes
+      ansible.builtin.systemd:
+        name: kubelet
+        enabled: yes
+        masked: no
       
-    # - name: Make sure kubelet is running
-    #   ansible.builtin.systemd:
-    #     state: started
-    #     name: kubelet
+    - name: Make sure kubelet is running
+      ansible.builtin.systemd:
+        state: started
+        name: kubelet
+
+    - name: Make sure previous configurations are gone
+      local_action: file path=~/.kube state=absent
+    
+    - name: Copy the configuration from the remote server
+      fetch:
+        src: ~/.kube/config
+        dest: ~/.kube/
+        flat: yes
+      

@@ -1,0 +1,39 @@
+- name: Deploys VM based on cloud image
+  hosts: localhost
+  gather_facts: yes
+  
+  tasks:
+    - name: Install a new VM
+      include_role:
+        name: install-vm
+
+- name: Install k8s and configure it as a worker
+  hosts: k8s-worker-1
+  become: yes
+  
+  tasks:
+
+    - name: Configure and install k8s
+      include_role:
+        name: configure-vm
+
+    - name: configure as a worker
+      include_role:
+        name: configure-worker
+
+- hosts: k8s-controller-1
+  tasks:
+    - name: Get join command from controller
+      shell: kubeadm token create --print-join-command
+      register: join_command
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: join_command.stdout_lines[0]
+        
+- hosts: k8s-worker-1
+  tasks:
+
+    - name: Join the controller
+      become: yes
+      shell: "{{ hostvars['k8s-controller-1']['join_command'].stdout_lines[0] }}"

@@ -7,19 +7,16 @@
       include_role:
         name: install-vm
 
-- name: Deploys VM based on cloud image step 2
+- name: Install k8s and configure it as a controller
   hosts: k8s-controller-1
   become: yes
   
   tasks:
+
     - name: Configure and install k8s
       include_role:
         name: configure-vm
 
-- name: Configure controller
-  hosts: k8s-controller-1
-  
-  tasks:
     - name: configure as a controller
       include_role:
         name: configure-controller
