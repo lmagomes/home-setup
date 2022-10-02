@@ -20,9 +20,13 @@
     - name: Apply flannel yaml
       shell: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
 
+    - name: Wait until the file flannel binary is present before continuing
+      ansible.builtin.wait_for:
+        path: /opt/cni/bin/flannel
+
     - name: copy flannel binary to the containerd configured plugin folder
       become: yes
-      copy:755755
+      copy:
         src: /opt/cni/bin/flannel
         dest: /usr/libexec/cni/flannel
         mode: '0755'
@@ -41,6 +45,7 @@
         name: kubelet
 
     - name: Make sure previous configurations are gone
+      become: no
       local_action: file path=~/.kube state=absent
     
     - name: Copy the configuration from the remote server

@@ -13,7 +13,7 @@
     command: |
       virt-builder fedora-36 \
         --format qcow2 -o {{ libvirt_pool_dir }}/{{ vm_name }}.qcow2 \
-        --size 8G \
+        --size 10G \
         --hostname {{ vm_name }} \
         --run-command "useradd -m {{ vm_user_name }} -G wheel" \
         --ssh-inject "{{ vm_user_name }}:file:{{ ssh_key }}" \
