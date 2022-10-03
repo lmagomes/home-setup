@@ -1,0 +1,9 @@
+- name: Deploys VM based on cloud image
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Configure localhost
+      include_role:
+        name: configure-localhost

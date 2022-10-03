@@ -1,4 +1,7 @@
 
+configure-localhost:
+	ansible-playbook -vvv -K configure_localhost.yaml
+
 create-controller:
 	ansible-playbook -i inventory create_controller.yaml
 
@@ -11,4 +14,4 @@ clean-vm:
 	virsh undefine k8s-controller-1
 	rm ~/.local/share/libvirt/images/k8s-controller-1.qcow2
 
-.PHONY: all create-controller create-workers clean-vm
+.PHONY: configure-localhost create-controller create-workers clean-vm

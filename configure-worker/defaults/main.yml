@@ -1,4 +1,0 @@
----
-# defaults file for configure-worker
-
-vm_name: k8s-worker-1

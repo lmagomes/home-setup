@@ -1,0 +1,62 @@
+---
+# tasks file for configure-localhost
+
+- name: Configure localhost
+  block:
+  - name: Upgrade all packages
+    ansible.builtin.dnf:
+      name: "*"
+      state: latest
+  
+  - name: Install all packages
+    dnf:
+      name:
+        - etckeeper
+        - tmux
+        - fish
+        - ansible
+        - podman-compose
+        - podman
+        - cockpit-podman
+        - cockpit-machines
+        - nfs-utils
+        - guestfs-tools
+        - python3-libvirt
+        - jq
+      state: latest
+  
+- name: Install kubectl
+  block:
+
+  - name: download kubectl
+    shell: |
+      wget -q https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl -P /tmp
+  - name: Move binary to bin folder
+    copy:
+      src: /tmp/kubectl
+      dest: /usr/local/bin/kubectl
+      mode: '0755'
+  - name: Remove downloaded file
+    file:
+      path: /tmp/kubectl
+      state: absent
+
+- name: Install k9s
+  block:
+
+  - name: download k9s
+    shell: |
+      wget -q https://github.com/derailed/k9s/releases/download/$(curl --silent "https://api.github.com/repos/derailed/k9s/releases/latest" | jq -r .tag_name)/k9s_Linux_x86_64.tar.gz -P /tmp
+      tar xf /tmp/k9s_Linux_x86_64.tar.gz -C /tmp k9s
+  - name: Move binary to bin folder
+    copy:
+      src: /tmp/k9s
+      dest: /usr/local/bin/k9s
+      mode: '0755'
+  - name: Remove downloaded files
+    file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+      - /tmp/k9s
+      - /tmp/k9s_Linux_x86_64.tar.gz
