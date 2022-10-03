@@ -1,5 +1,0 @@
----
-- hosts: localhost
-  remote_user: node
-  roles:
-    - configure-controller
