@@ -1,5 +1,6 @@
 
 configure-localhost:
+	sudo dnf install ansible
 	ansible-playbook -vvv -K configure_localhost.yaml
 
 create-controller:

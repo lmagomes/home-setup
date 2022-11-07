@@ -8,13 +8,30 @@
       name: "*"
       state: latest
   
-  - name: Install all packages
+  - name: Install etckeeper
+    dnf:
+      name: etckeeper
+      state: latest
+
+  - name: Configure git
+    shell: |
+      git config --global user.name "{{ git_username }}"
+      git config --global user.email "{{ git_email }}"
+      git remote add origin git@github.com:lmagomes/etc-$(hostname).git
+    args:
+      chdir: /etc/
+
+  - name: Add origin as the remote push
+    lineinfile:
+      path: /etc/etckeeper/etckeeper.conf
+      search_string: 'PUSH_REMOTE=""'
+      line: 'PUSH_REMOTE="origin"'
+  
+  - name: Install all required packages
     dnf:
       name:
-        - etckeeper
         - tmux
         - fish
-        - ansible
         - podman-compose
         - podman
         - cockpit-podman
