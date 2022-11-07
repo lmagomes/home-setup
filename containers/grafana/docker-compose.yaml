@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      GF_INSTALL_PLUGINS: "https://github.com/performancecopilot/grafana-pcp/releases/download/v5.0.0/performancecopilot-pcp-app-5.0.0.zip;performancecopilot-pcp-app"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      
+volumes:
+  grafana-data:
+
+networks:
+  default:
+    external:
+      name: proxy
